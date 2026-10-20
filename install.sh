@@ -7,6 +7,7 @@
 #   VERSION  pin a version (default: latest)
 #   DEST     install directory (default: ~/.local/bin)
 #   LITE     1 to omit bundled OpenCode
+#   APP_ONLY 1 to update only opencode-cloudlink (module updates stay independent)
 set -eu
 
 REPO="${REPO:-alvarolorentedev/opencode-cloud-link-releases}"
@@ -60,12 +61,19 @@ fi
 mkdir -p "$DEST"
 # Keep all binaries in the same directory: the connector resolves its bundled
 # cloudflared and opencode next to itself.
-for bin in "$product" cloudflared opencode; do
-  if [ -f "$tmp/$name/$bin" ]; then
-    cp "$tmp/$name/$bin" "$DEST/"
-    chmod +x "$DEST/$bin"
+if [ "${APP_ONLY:-0}" = 1 ]; then
+  if [ -f "$tmp/$name/$product" ]; then
+    cp "$tmp/$name/$product" "$DEST/"
+    chmod +x "$DEST/$product"
   fi
-done
+else
+  for bin in "$product" cloudflared opencode; do
+    if [ -f "$tmp/$name/$bin" ]; then
+      cp "$tmp/$name/$bin" "$DEST/"
+      chmod +x "$DEST/$bin"
+    fi
+  done
+fi
 if [ -d "$tmp/$name/licenses" ]; then
   mkdir -p "$DEST/opencode-cloudlink-licenses"
   cp -R "$tmp/$name/licenses/." "$DEST/opencode-cloudlink-licenses/"
