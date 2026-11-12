@@ -1,13 +1,11 @@
 #!/usr/bin/env sh
-# Install the Rust OpenCode CloudLink CLI and pinned tools from one verified release.
+# Install the Rust OpenCode CloudLink CLI from one verified release.
 #
 #   curl -fsSL https://raw.githubusercontent.com/alvarolorentedev/opencode-cloud-link-releases/main/install.sh | sh
 #
 # Environment:
 #   VERSION  pin a version (default: latest)
 #   DEST     install directory (default: ~/.local/bin)
-#   LITE     1 to omit bundled OpenCode
-#   APP_ONLY 1 to update only opencode-cloudlink (module updates stay independent)
 set -eu
 
 REPO="${REPO:-alvarolorentedev/opencode-cloud-link-releases}"
@@ -38,7 +36,6 @@ VERSION="${VERSION#v}"
 case "$VERSION" in *[!0-9.]* | .* | *..* | *.) echo "invalid release version" >&2; exit 1 ;; esac
 
 name="opencode-cloudlink_${os}_${arch}"
-if [ "${LITE:-0}" = 1 ]; then name="${name}-lite"; fi
 url="https://github.com/$REPO/releases/download/v${VERSION}/${name}.tar.gz"
 
 tmp=$(mktemp -d)
@@ -53,27 +50,11 @@ case "$expected" in *[!0-9a-f]*) echo "invalid archive checksum" >&2; exit 1 ;; 
 if command -v sha256sum >/dev/null 2>&1; then actual=$(sha256sum "$tmp/pkg.tar.gz" | awk '{print $1}'); else actual=$(shasum -a 256 "$tmp/pkg.tar.gz" | awk '{print $1}'); fi
 [ "$actual" = "$expected" ] || { echo "archive checksum mismatch" >&2; exit 1; }
 tar -xzf "$tmp/pkg.tar.gz" -C "$tmp"
-[ -f "$tmp/$name/opencode-cloudlink" ] && [ -f "$tmp/$name/cloudflared" ] || { echo "incomplete release archive" >&2; exit 1; }
-if [ "${LITE:-0}" != 1 ]; then
-  [ -f "$tmp/$name/opencode" ] || { echo "full archive is missing OpenCode" >&2; exit 1; }
-fi
+[ -f "$tmp/$name/opencode-cloudlink" ] || { echo "incomplete release archive" >&2; exit 1; }
 
 mkdir -p "$DEST"
-# Keep all binaries in the same directory: the connector resolves its bundled
-# cloudflared and opencode next to itself.
-if [ "${APP_ONLY:-0}" = 1 ]; then
-  if [ -f "$tmp/$name/$product" ]; then
-    cp "$tmp/$name/$product" "$DEST/"
-    chmod +x "$DEST/$product"
-  fi
-else
-  for bin in "$product" cloudflared opencode; do
-    if [ -f "$tmp/$name/$bin" ]; then
-      cp "$tmp/$name/$bin" "$DEST/"
-      chmod +x "$DEST/$bin"
-    fi
-  done
-fi
+cp "$tmp/$name/$product" "$DEST/"
+chmod +x "$DEST/$product"
 if [ -d "$tmp/$name/licenses" ]; then
   mkdir -p "$DEST/opencode-cloudlink-licenses"
   cp -R "$tmp/$name/licenses/." "$DEST/opencode-cloudlink-licenses/"
